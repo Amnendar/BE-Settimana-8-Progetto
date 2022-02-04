@@ -24,19 +24,28 @@ public class ContocorrenteRest {
 	private static ArrayList<Contocorrente> conti = new ArrayList<>();
 	private static ArrayList<Movimento> movimenti = new ArrayList<>(); 
 
+	//path index:
 	//http://localhost:8080/EWallet/rest/conto
 
 
+	//aggiunge un conto
 	@POST
 	@Path("/")
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response creaConto(Contocorrente c) {
+		for (Contocorrente conto : conti) {
+			if(conto.getIban().equals(c.getIban())) {
+				return Response.status(404).entity("ERRORE! Iban gia presente!").build();
+			}
+			
+		}
 		conti.add(c);
 
 		return Response.status(200).entity("Creazione conto avvenuta con successo!").build();
 
 	}
 
+	//rimuove un conto
 	@DELETE
 	@Path("/")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -52,6 +61,7 @@ public class ContocorrenteRest {
 
 	}
 
+	//aggiorna un conto
 	@PUT
 	@Path("/")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -66,16 +76,20 @@ public class ContocorrenteRest {
 		return Response.status(404).entity("Un conto con questo Iban non esiste!").build();
 	}
 
+	//effettua un'operazione
 	@PUT
 	@Path("/movimento")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Response preleva(Movimento m) {
+	public Response movimento(Movimento m) {
 		for (Contocorrente con : conti) {
 			if(con.getIban().equals(m.getIban())) {
 
 				if (m.getTipo().equals(Operazione.PRELIEVO)) {
-					if (m.getImporto() > con.getSaldo() || m.getImporto() < 0) {
-						return Response.status(406).entity("Non puoi prelevare piu del tuo saldo attuale e/o selezionare un importo negativo").build();
+					if (m.getImporto() > con.getSaldo()) {
+						return Response.status(406).entity("Non puoi prelevare piu del tuo saldo attuale").build();
+					}
+					if (m.getImporto() < 0) {
+						return Response.status(405).entity("ERRORE! non puoi selezionare un importo negativo").build();
 					}
 					double nuovoSaldo = con.getSaldo()- m.getImporto();
 					con.setSaldo(nuovoSaldo);
@@ -85,7 +99,7 @@ public class ContocorrenteRest {
 
 				if (m.getTipo().equals(Operazione.VERSAMENTO)) {
 					if(m.getImporto() < 0) {
-						return Response.status(406).entity("Non puoi versare un importo negativo").build();
+						return Response.status(405).entity("Non puoi versare un importo negativo").build();
 					}
 					double nuovoSaldo = con.getSaldo() + m.getImporto();
 					con.setSaldo(nuovoSaldo);
@@ -98,6 +112,7 @@ public class ContocorrenteRest {
 	}
 
 
+	//restituisce una lista di tutti i movimenti
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -106,6 +121,7 @@ public class ContocorrenteRest {
 		return movimenti;
 	}
 
+	//restituisce una lista di tutti i conti
 	@GET
 	@Path("/conti")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -113,5 +129,22 @@ public class ContocorrenteRest {
 
 		return conti;
 	}
+	
+	//restituisce i movimenti legati ad un singolo conto
+	@GET
+	@Path("/iban")
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<Movimento> getContiIban(Contocorrente c){
+		ArrayList<Movimento> movimentiIban = new ArrayList<>();
+		for (Movimento mov : movimenti) {
+			if(mov.getIban().equals(c.getIban())) {
+				movimentiIban.add(mov);
+			}
+			
+		}
+		
+		return movimentiIban;
+	}
+	
 
 }
